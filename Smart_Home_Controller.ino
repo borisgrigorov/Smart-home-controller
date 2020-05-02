@@ -2,7 +2,7 @@
 #include <DNSServer.h> //DNS server for wifi manager
 #include <ESP8266WebServer.h> //Webserver for wifi manager
 #include <WiFiManager.h> //Wifi manager
-#include <RCSwitch.h> //Library for 433MHz sockets
+#include <RCSwitch.h> //Library for 433MHz module
 #include <ESP8266WiFi.h> //Wifi library
 #include <PubSubClient.h> //Mqtt library
 
