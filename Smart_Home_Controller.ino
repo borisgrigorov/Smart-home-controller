@@ -23,8 +23,8 @@ int IRledPin =  16;
 int wirelessModule = 10;
 
 //Set mqtt broker (server)
-const char* mqttServer = "10.0.0.130";
-int mqttPort = 1883;
+const char* mqttServer = "10.0.0.130"; //Set your mqtt broker ip address (set your own)
+int mqttPort = 1883; //Set your mqtt broker port (set your own)
 
 //set button press properties
 long buttonTimer = 0;
