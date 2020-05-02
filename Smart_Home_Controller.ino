@@ -1,38 +1,56 @@
-#include <DNSServer.h>
-#include <ESP8266WebServer.h>
-#include <WiFiManager.h>
-#include <RCSwitch.h>
-int IRledPin =  16;
-RCSwitch mySwitch = RCSwitch();
-#include <ESP8266WiFi.h>
-#include <PubSubClient.h>
-//const char* ssid = "WiFiG";
-//const char* password = "grigorovovi96";
-const char* mqttServer = "10.0.0.130";
+//Import used libraries
+#include <DNSServer.h> //DNS server for wifi manager
+#include <ESP8266WebServer.h> //Webserver for wifi manager
+#include <WiFiManager.h> //Wifi manager
+#include <RCSwitch.h> //Library for 433MHz sockets
+#include <ESP8266WiFi.h> //Wifi library
+#include <PubSubClient.h> //Mqtt library
+
+#include "ir.h"
+#include "ir_commands.h"
+
 WiFiClient espClient;
 PubSubClient client(espClient);
+RCSwitch mySwitch = RCSwitch();
+WiFiManager wifiManager;
+
+//Set pins numbers
+int buttonPin = 12;
+int greenLed = 4;
+int redLed = 0;
+int motionSensor = 14;
+int IRledPin =  16;
+int wirelessModule = 10;
+
+//Set mqtt broker (server)
+const char* mqttServer = "10.0.0.130";
+int mqttPort = 1883;
+
+//set button press properties
 long buttonTimer = 0;
 long longPressTime = 300;
 boolean buttonActive = false;
 boolean longPressActive = false;
-long odezva, vzdalenost;
-String a = "";
-boolean motion = false;
+
+String a = ""; //Mqtt command string
+boolean motion = false; //Motion sensor status
+
+//Function for incoming mqtt message
 void callback(char* topic, byte* payload, unsigned int length) {
-  a = "";
-  Serial.print("Message arrived in topic: ");
+  a = ""; //Clear command string
+  Serial.print("Message arrived in topic: "); //Print message topic on serial monitor
   Serial.println(topic);
- 
   Serial.print("Message:");
   for (int i = 0; i < length; i++) {
     a = a + (char)payload[i];
   }
-  if(a == "on1x")
+  Serial.println(a); //Print message on serial monitor
+  if(a == "on1") //If command is "on1"
   {
-    mySwitch.send("10011000111000110000111111110100");
-    client.publish("sockets/1/status", "on");
-    Serial.println("Turning 1 on");
-    delay(500);
+    mySwitch.send("10011000111000110000111111110100"); //Then send signal by 433MHz module, (turn on socket one)
+    client.publish("sockets/1/status", "on"); //Publish sockets status
+    Serial.println("Turning 1 on"); //Print status on serial monitor
+    delay(500); //Wait 0.5s
   } 
   if(a == "off1"){
     mySwitch.send("10011000111000110000011111111100");
@@ -40,7 +58,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.println("Turning 1 off");
     delay(500);
   }
-  if(a == "on2x"){
+  if(a == "on2"){
     mySwitch.send("10011000111000110000101111110010");
     client.publish("sockets/2/status", "on");
     delay(500);
@@ -50,7 +68,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     client.publish("sockets/2/status", "off");
     delay(500);
   }
-  if(a == "on3x"){
+  if(a == "on3"){
     mySwitch.send("10011000111000110000110111110110");
     client.publish("sockets/3/status", "on");
     delay(1000);
@@ -60,7 +78,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     client.publish("sockets/3/status", "off");
     delay(1000);
   }
-  if(a == "on4x"){bool door = false;
+  if(a == "on4"){
     mySwitch.send("10011000111000110000111011110101");
     client.publish("sockets/4/status", "on");
     delay(1000);
@@ -70,310 +88,125 @@ void callback(char* topic, byte* payload, unsigned int length) {
     client.publish("sockets/4/status", "off");
     delay(1000);
   }
-  if(a == "onll"){
+  if(a == "onall"){
     mySwitch.send("10011000111000110000010011111111");
     client.publish("sockets/all/status", "on");
     delay(1000);
   }
-  if(a == "offa"){
+  if(a == "offall"){
     mySwitch.send("10011000111000110000100011110000");
-    client.publish("sockets/all", "off");
+    client.publish("sockets/all/status", "off");
     delay(1000);
   }
   if(a == "tv"){
-    SendChannelUpCode();
-    delay(1000);
+    tv(); //Call tv function that sends IR signal to tv
+    delay(1000); //Wait 1 second
   }
   if(a == "radio"){
-    radio();
-    delay(1000);
+    radio(); //Call radio function that sends IR signal to radio
+    delay(1000); //Wait 1 second
   }
-  Serial.println(a);
   Serial.println("-----------------------");
  
 }
 void setup() {
+  //Set pins modes
   pinMode(IRledPin, OUTPUT);
+  pinMode(buttonPin, INPUT);
+  pinMode(motionSensor, INPUT);
+  pinMode(greenLed, OUTPUT);
+  pinMode(redLEd, OUTPUT);
+
+  //Begin serial communication
   Serial.begin(9600);
-  //WiFi.begin(ssid, password);
-  WiFiManager wifiManager;
-  wifiManager.autoConnect("Smart home mini");
-  pinMode(12, INPUT);
-  pinMode(14, INPUT);
-  pinMode(0, OUTPUT);
-  pinMode(4, OUTPUT);
-  mySwitch.enableTransmit(10);
-  mySwitch.setProtocol(1);
-  mySwitch.setPulseLength(259);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.println("Connecting to WiFi..");
+
+  //Use wifi manager for first time use
+  wifiManager.autoConnect("Smart home mini"); //Set access point name
+
+  //Set 433Mhz module properties
+  mySwitch.enableTransmit(wirelessModule); //Module pin
+  mySwitch.setProtocol(1); //Set protocol (protocol 1 should be work for most sockets)
+  mySwitch.setPulseLength(259); //Set pulse length
+  while (WiFi.status() != WL_CONNECTED) { //If not connected to wifi
+    delay(500); //Wait 0.5 second
+    Serial.println("Connecting to WiFi.."); //Print "Connecting to wifi..."
   }
-  Serial.println("Connected to the WiFi network");
- 
-  client.setServer(mqttServer, 1883);
-  client.setCallback(callback);
- 
-  while (!client.connected()) {
+  Serial.println("Connected to the WiFi network"); //If connected, print "Connected to the WiFi network"
+  client.setServer(mqttServer, mqttPort); //Set mqtt broker (server) and port
+  client.setCallback(callback); //set callback function
+  while (!client.connected()) { //If not connected to wifi
     Serial.println("Connecting to MQTT...");
-    if (client.connect("ESP32Client")) {
-      Serial.println("connected");  
-    } else {
-      Serial.print("failed with state ");
+    if (client.connect("SmartHomeMini")) { //If is mqtt client connect
+      Serial.println("connected");  //Print "connected"
+    } else { //If is not connected
+      Serial.print("failed with state "); //Print state
       Serial.print(client.state());
-      delay(2000);
+      delay(2000); //Wait 2 seconds
  
     }
   }
+  //Subcribe to mqqt topic
   client.subscribe("sockets/state");
 }
 
 void loop() {
     client.loop();
-    if(digitalRead(14) == HIGH && motion == false){
-      client.publish("node/motion", "motion");
-      motion = true;
-      digitalWrite(0, HIGH);
+    if(digitalRead(motionSensor) == HIGH && motion == false){ //If motion is detected
+      client.publish("node/motion", "motion"); //Send mqtt message about motion
+      motion = true; //Set motion variable to true (motion), to prevent repeated trigger
+      digitalWrite(redLed, HIGH); //Blink red LED
       delay(200);
-      digitalWrite(0, LOW);
+      digitalWrite(redLed, LOW);
     }
-    else if(digitalRead(14) == LOW && motion == true){
-      motion = false;
+    else if(digitalRead(motionSensor) == LOW && motion == true){ //If is no motion
+      motion = false; //Set variable to no-motion
     }
-    if (digitalRead(12) == HIGH) {
-      if (buttonActive == false) {
-        buttonActive = true;
-        buttonTimer = millis();
+    if (digitalRead(buttonPin) == HIGH) { //If buuton is pressed
+      if (buttonActive == false) { //And "active" variable is not true
+        buttonActive = true; //Set it to true
+        buttonTimer = millis(); //Set time of press
       }
-      if ((millis() - buttonTimer > longPressTime) && (longPressActive == false)) {
-        longPressActive = true;
-        client.publish("node/button", "long");
-        digitalWrite(0, HIGH);
+      if ((millis() - buttonTimer > longPressTime) && (longPressActive == false)) { //If it is pressed for more than set time, and is not active longPress variable
+        longPressActive = true; //Set it to true
+        client.publish("node/button", "long"); //Send mqtt message about long press
+        digitalWrite(redLed, HIGH); //Twice blink red LED
         delay(100);
-        digitalWrite(0, LOW);
+        digitalWrite(redLed, LOW);
         delay(100);
-        digitalWrite(0, HIGH);
+        digitalWrite(redLed, HIGH);
         delay(100);
-        digitalWrite(0, LOW);
+        digitalWrite(redLed, LOW);
         delay(100);
       }
-    } else {
-      if (buttonActive == true) {
-        if (longPressActive == true) {
-          longPressActive = false;
-        } else {
-          client.publish("node/button", "short");
-          digitalWrite(4, HIGH);
+    } else { //Else
+      if (buttonActive == true) { //Button is pressed
+        if (longPressActive == true) { //And long press is active
+          longPressActive = false; //Set it to false
+        } else { //else
+          client.publish("node/button", "short"); //Send mqtt message about short press
+          digitalWrite(greenLed, HIGH); //Twice blink green LED
           delay(100);
-          digitalWrite(4, LOW);
+          digitalWrite(greenLed, LOW);
           delay(100);
-          digitalWrite(4, HIGH);
+          digitalWrite(greenLed, HIGH);
           delay(100);
-          digitalWrite(4, LOW);
+          digitalWrite(greenLed, LOW);
           delay(100);
         }
-        buttonActive = false;
+        buttonActive = false; //Set it to false
       }
-    }
-    
+    }   
 }
+
+//Function for sending ir codes
 void pulseIR(long microsecs) {
-  // we'll count down from the number of microseconds we are told to wait
- 
-  cli();  // this turns off any background interrupts
- 
+  cli();
   while (microsecs > 0) {
-    // 38 kHz is about 13 microseconds high and 13 microseconds low
-   digitalWrite(IRledPin, HIGH);  // this takes about 3 microseconds to happen
-   delayMicroseconds(10);         // hang out for 10 microseconds
-   digitalWrite(IRledPin, LOW);   // this also takes about 3 microseconds
-   delayMicroseconds(10);         // hang out for 10 microseconds
- 
-   // so 26 microseconds altogether
+   digitalWrite(IRledPin, HIGH);
+   delayMicroseconds(10);
+   digitalWrite(IRledPin, LOW);
+   delayMicroseconds(10);
    microsecs -= 26;
   }
- 
-  sei();  // this turns them back on
-}
- 
-void SendChannelUpCode() {
-  delayMicroseconds(40152); //Time off (Left Column on serial monitor)
-  pulseIR(3060);           //Time on  (Right Column on serial monitor)
-  delayMicroseconds(3120);
-  pulseIR(440);
-  delayMicroseconds(1600);
-  pulseIR(480);
-  delayMicroseconds(1560);
-  pulseIR(480);
-  delayMicroseconds(1580);
-  pulseIR(480);
-  delayMicroseconds(1580);
-  pulseIR(460);
-  delayMicroseconds(1620);
-  pulseIR(460);
-  delayMicroseconds(1580);
-  pulseIR(460);
-  delayMicroseconds(2580);
-  pulseIR(460);
-  delayMicroseconds(1620);
-  pulseIR(460);
-  delayMicroseconds(1580);
-  pulseIR(460);
-  delayMicroseconds(1600);
-  pulseIR(480);
-  delayMicroseconds(1580);
-  pulseIR(500);
-  delayMicroseconds(1560);
-  pulseIR(460);
-  delayMicroseconds(2620);
-  pulseIR(440);
-  delayMicroseconds(1600);
-  pulseIR(460);
-  delayMicroseconds(2580);
-  pulseIR(460);
-  delayMicroseconds(2580);
-  pulseIR(480);
-  delayMicroseconds(4100);
-  pulseIR(500);
-  delayMicroseconds(23480);
-  pulseIR(3100);
-  delayMicroseconds(3100);
-  pulseIR(460);
-  delayMicroseconds(1580);
-  pulseIR(480);
-  delayMicroseconds(1580);
-  pulseIR(480);
-  delayMicroseconds(1580);
-  pulseIR(460);
-  delayMicroseconds(1600);
-  pulseIR(460);
-  delayMicroseconds(1580);
-  pulseIR(480);
-  delayMicroseconds(1600);
-  pulseIR(480);
-  delayMicroseconds(2560);
-  pulseIR(480);
-  delayMicroseconds(1600);
-  pulseIR(480);
-  delayMicroseconds(1560);
-  pulseIR(460);
-  delayMicroseconds(1580);
-  pulseIR(460);
-  delayMicroseconds(1600);
-  pulseIR(480);
-  delayMicroseconds(1580);
-  pulseIR(480);
-  delayMicroseconds(2580);
-  pulseIR(480);
-  delayMicroseconds(1600);
-  pulseIR(440);
-  delayMicroseconds(2600);
-  pulseIR(440);
-  delayMicroseconds(2600);
-  pulseIR(440);
-  delayMicroseconds(4140);
-  pulseIR(480);
-  
-}
-void radio(){
-delayMicroseconds(160);
-pulseIR(3440);
-delayMicroseconds(1900);
-pulseIR(400);
-delayMicroseconds(1240);
-pulseIR(400);
-delayMicroseconds(1240);
-pulseIR(400);
-delayMicroseconds(480);
-pulseIR(420);
-delayMicroseconds(480);
-pulseIR(460);
-delayMicroseconds(440);
-pulseIR(380);
-delayMicroseconds(500);
-pulseIR(460);
-delayMicroseconds(1180);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(380);
-delayMicroseconds(1240);
-pulseIR(400);
-delayMicroseconds(1220);
-pulseIR(400);
-delayMicroseconds(500);
-pulseIR(460);
-delayMicroseconds(440);
-pulseIR(400);
-delayMicroseconds(1220);
-pulseIR(460);
-delayMicroseconds(440);
-pulseIR(400);
-delayMicroseconds(1220);
-pulseIR(460);
-delayMicroseconds(440);
-pulseIR(400);
-delayMicroseconds(1220);
-pulseIR(400);
-delayMicroseconds(480);
-pulseIR(400);
-delayMicroseconds(520);
-pulseIR(460);
-delayMicroseconds(420);
-pulseIR(420);
-delayMicroseconds(480);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(400);
-delayMicroseconds(500);
-pulseIR(360);
-delayMicroseconds(520);
-pulseIR(460);
-delayMicroseconds(440);
-pulseIR(460);
-delayMicroseconds(440);
-pulseIR(380);
-delayMicroseconds(1240);
-pulseIR(400);
-delayMicroseconds(500);
-pulseIR(360);
-delayMicroseconds(540);
-pulseIR(360);
-delayMicroseconds(520);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(360);
-delayMicroseconds(1260);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(380);
-delayMicroseconds(500);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(400);
-delayMicroseconds(480);
-pulseIR(460);
-delayMicroseconds(440);
-pulseIR(460);
-delayMicroseconds(1160);
-pulseIR(460);
-delayMicroseconds(420);
-pulseIR(400);
-delayMicroseconds(1240);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(380);
-delayMicroseconds(500);
-pulseIR(380);
-delayMicroseconds(520);
-pulseIR(460);
-delayMicroseconds(440);
-pulseIR(380);
+  sei();
 }
