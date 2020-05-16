@@ -19,7 +19,7 @@ Smart home controller firmware for ESP8266 for controlling smart sockets, switch
 `git clone https://github.com/borisgrigorov/Smart-home-controller.git` 
 or download .zip
 2. (Optional)
-[Get the IR and 433Mhz codes.](#Get%20codes)
+[Get the IR and 433Mhz codes.](#Get-codes)
 3. Connect all things you want to use to the board.
 4. Change code for what you want to use, change pins for your connection, and change parameters like mqtt brokers address and port, or mqtt messages.
 5. Upload code from Arduino IDE.
