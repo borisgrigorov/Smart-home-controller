@@ -165,7 +165,7 @@ void setup() {
     }
   }
   //Subcribe to mqqt topic
-  client.subscribe("sockets/state");
+  client.subscribe("devicecontrol/command");
 }
 
 void loop() {
