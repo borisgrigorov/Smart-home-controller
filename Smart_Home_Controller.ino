@@ -6,8 +6,6 @@
 #include <ESP8266WiFi.h> //Wifi library
 #include <PubSubClient.h> //Mqtt library
 
-#include "ir.h"
-#include "ir_commands.h"
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -19,8 +17,11 @@ int buttonPin = 12;
 int greenLed = 4;
 int redLed = 0;
 int motionSensor = 14;
-int IRledPin =  16;
+int IRledPin =  5;
 int wirelessModule = 10;
+
+boolean tvStatus = false; //Variables for devices status
+boolean radioStatus = false;
 
 //Set mqtt broker (server)
 const char* mqttServer = "10.0.0.130"; //Set your mqtt broker ip address (set your own)
@@ -100,11 +101,27 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   if(a == "tv"){
     tv(); //Call tv function that sends IR signal to tv
-    delay(1000); //Wait 1 second
+    delay(500); //Wait 0.5 second
+    if(tvStatus == true){
+      client.publish("devices/tv", "off");
+      tvStatus = false;
+    }
+    else{
+      client.publish("devices/tv", "on");
+      tvStatus = true;
+    }
   }
   if(a == "radio"){
     radio(); //Call radio function that sends IR signal to radio
-    delay(1000); //Wait 1 second
+    delay(500); //Wait 0.5 second
+    if(radioStatus == true){
+      client.publish("devices/radio", "off");
+      radioStatus = false;
+    }
+    else{
+      client.publish("devices/radio", "on");
+      radioStatus = true;
+    }
   }
   Serial.println("-----------------------");
  
@@ -115,7 +132,9 @@ void setup() {
   pinMode(buttonPin, INPUT);
   pinMode(motionSensor, INPUT);
   pinMode(greenLed, OUTPUT);
-  pinMode(redLEd, OUTPUT);
+  pinMode(redLed, OUTPUT);
+  pinMode(16, OUTPUT);
+  digitalWrite(16, HIGH);
 
   //Begin serial communication
   Serial.begin(9600);
@@ -197,7 +216,6 @@ void loop() {
       }
     }   
 }
-
 //Function for sending ir codes
 void pulseIR(long microsecs) {
   cli();
@@ -209,4 +227,185 @@ void pulseIR(long microsecs) {
    microsecs -= 26;
   }
   sei();
+}
+void tv() {
+  delayMicroseconds(40152);
+  pulseIR(3060);
+  delayMicroseconds(3120);
+  pulseIR(440);
+  delayMicroseconds(1600);
+  pulseIR(480);
+  delayMicroseconds(1560);
+  pulseIR(480);
+  delayMicroseconds(1580);
+  pulseIR(480);
+  delayMicroseconds(1580);
+  pulseIR(460);
+  delayMicroseconds(1620);
+  pulseIR(460);
+  delayMicroseconds(1580);
+  pulseIR(460);
+  delayMicroseconds(2580);
+  pulseIR(460);
+  delayMicroseconds(1620);
+  pulseIR(460);
+  delayMicroseconds(1580);
+  pulseIR(460);
+  delayMicroseconds(1600);
+  pulseIR(480);
+  delayMicroseconds(1580);
+  pulseIR(500);
+  delayMicroseconds(1560);
+  pulseIR(460);
+  delayMicroseconds(2620);
+  pulseIR(440);
+  delayMicroseconds(1600);
+  pulseIR(460);
+  delayMicroseconds(2580);
+  pulseIR(460);
+  delayMicroseconds(2580);
+  pulseIR(480);
+  delayMicroseconds(4100);
+  pulseIR(500);
+  delayMicroseconds(23480);
+  pulseIR(3100);
+  delayMicroseconds(3100);
+  pulseIR(460);
+  delayMicroseconds(1580);
+  pulseIR(480);
+  delayMicroseconds(1580);
+  pulseIR(480);
+  delayMicroseconds(1580);
+  pulseIR(460);
+  delayMicroseconds(1600);
+  pulseIR(460);
+  delayMicroseconds(1580);
+  pulseIR(480);
+  delayMicroseconds(1600);
+  pulseIR(480);
+  delayMicroseconds(2560);
+  pulseIR(480);
+  delayMicroseconds(1600);
+  pulseIR(480);
+  delayMicroseconds(1560);
+  pulseIR(460);
+  delayMicroseconds(1580);
+  pulseIR(460);
+  delayMicroseconds(1600);
+  pulseIR(480);
+  delayMicroseconds(1580);
+  pulseIR(480);
+  delayMicroseconds(2580);
+  pulseIR(480);
+  delayMicroseconds(1600);
+  pulseIR(440);
+  delayMicroseconds(2600);
+  pulseIR(440);
+  delayMicroseconds(2600);
+  pulseIR(440);
+  delayMicroseconds(4140);
+  pulseIR(480);
+  
+}
+void radio(){
+delayMicroseconds(160);
+pulseIR(3440);
+delayMicroseconds(1900);
+pulseIR(400);
+delayMicroseconds(1240);
+pulseIR(400);
+delayMicroseconds(1240);
+pulseIR(400);
+delayMicroseconds(480);
+pulseIR(420);
+delayMicroseconds(480);
+pulseIR(460);
+delayMicroseconds(440);
+pulseIR(380);
+delayMicroseconds(500);
+pulseIR(460);
+delayMicroseconds(1180);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(380);
+delayMicroseconds(1240);
+pulseIR(400);
+delayMicroseconds(1220);
+pulseIR(400);
+delayMicroseconds(500);
+pulseIR(460);
+delayMicroseconds(440);
+pulseIR(400);
+delayMicroseconds(1220);
+pulseIR(460);
+delayMicroseconds(440);
+pulseIR(400);
+delayMicroseconds(1220);
+pulseIR(460);
+delayMicroseconds(440);
+pulseIR(400);
+delayMicroseconds(1220);
+pulseIR(400);
+delayMicroseconds(480);
+pulseIR(400);
+delayMicroseconds(520);
+pulseIR(460);
+delayMicroseconds(420);
+pulseIR(420);
+delayMicroseconds(480);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(400);
+delayMicroseconds(500);
+pulseIR(360);
+delayMicroseconds(520);
+pulseIR(460);
+delayMicroseconds(440);
+pulseIR(460);
+delayMicroseconds(440);
+pulseIR(380);
+delayMicroseconds(1240);
+pulseIR(400);
+delayMicroseconds(500);
+pulseIR(360);
+delayMicroseconds(540);
+pulseIR(360);
+delayMicroseconds(520);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(360);
+delayMicroseconds(1260);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(380);
+delayMicroseconds(500);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(400);
+delayMicroseconds(480);
+pulseIR(460);
+delayMicroseconds(440);
+pulseIR(460);
+delayMicroseconds(1160);
+pulseIR(460);
+delayMicroseconds(420);
+pulseIR(400);
+delayMicroseconds(1240);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(380);
+delayMicroseconds(500);
+pulseIR(380);
+delayMicroseconds(520);
+pulseIR(460);
+delayMicroseconds(440);
+pulseIR(380);
 }
